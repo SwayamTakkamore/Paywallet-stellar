@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,7 @@ const mockPayrollData: PayrollEntry[] = [
 export default function PayrollPage() {
   const [payrollData] = useState<PayrollEntry[]>(mockPayrollData);
   const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'failed'>('all');
+  const router = useRouter();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -87,7 +89,13 @@ export default function PayrollPage() {
           <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
           <p className="text-gray-600">Manage employee salaries and payment schedules</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">
+        <Button 
+          className="bg-green-600 hover:bg-green-700"
+          onClick={() => {
+            // For now, just alert. In future, this would open a modal
+            alert('Create Payroll functionality will be implemented soon!');
+          }}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Create Payroll
         </Button>
@@ -164,7 +172,12 @@ export default function PayrollPage() {
               <option value="completed">Completed</option>
               <option value="failed">Failed</option>
             </select>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={() => {
+                alert('Filter functionality will be implemented soon!');
+              }}
+            >
               <Filter className="w-4 h-4 mr-2" />
               Filter
             </Button>
@@ -176,7 +189,12 @@ export default function PayrollPage() {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">Payroll History</h3>
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={() => {
+              alert('Export functionality will be implemented soon!');
+            }}
+          >
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
@@ -233,10 +251,25 @@ export default function PayrollPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button className="text-green-600 hover:text-green-900">View</button>
-                      <button className="text-blue-600 hover:text-blue-900">Edit</button>
+                      <button 
+                        className="text-green-600 hover:text-green-900"
+                        onClick={() => alert(`Viewing payroll ${entry.period}`)}
+                      >
+                        View
+                      </button>
+                      <button 
+                        className="text-blue-600 hover:text-blue-900"
+                        onClick={() => alert(`Editing payroll ${entry.period}`)}
+                      >
+                        Edit
+                      </button>
                       {entry.status === 'completed' && (
-                        <button className="text-gray-600 hover:text-gray-900">Download</button>
+                        <button 
+                          className="text-gray-600 hover:text-gray-900"
+                          onClick={() => alert(`Downloading payroll ${entry.period}`)}
+                        >
+                          Download
+                        </button>
                       )}
                     </div>
                   </td>

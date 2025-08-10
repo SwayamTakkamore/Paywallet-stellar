@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Users, DollarSign, Calendar, TrendingUp, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { useDashboardStore } from '@/store';
 
 export default function EmployerDashboard() {
   const { stats, loading, fetchEmployerStats } = useDashboardStore();
+  const router = useRouter();
 
   useEffect(() => {
     fetchEmployerStats();
@@ -54,11 +56,18 @@ export default function EmployerDashboard() {
           <p className="text-gray-600">Welcome back! Here&apos;s what&apos;s happening with your payroll.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <Button 
+            variant="outline" 
+            className="transition-all duration-200 hover:scale-105 hover:shadow-lg"
+            onClick={() => router.push('/employer/payroll')}
+          >
             <Calendar className="mr-2 h-4 w-4" />
             Schedule Payment
           </Button>
-          <Button className="transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <Button 
+            className="transition-all duration-200 hover:scale-105 hover:shadow-lg"
+            onClick={() => router.push('/employer/employees')}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Add Employee
           </Button>
@@ -151,7 +160,13 @@ export default function EmployerDashboard() {
               </TableBody>
             </Table>
             <div className="mt-4">
-              <Button variant="outline" className="w-full">View All Transactions</Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => router.push('/employer/payments')}
+              >
+                View All Transactions
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -172,7 +187,12 @@ export default function EmployerDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold">{formatCurrency(payment.amount)}</p>
-                    <Button size="sm" variant="outline" className="mt-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="mt-1"
+                      onClick={() => router.push('/employer/payroll')}
+                    >
                       Review
                     </Button>
                   </div>
@@ -180,7 +200,13 @@ export default function EmployerDashboard() {
               ))}
             </div>
             <div className="mt-4">
-              <Button variant="outline" className="w-full">View All Schedules</Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => router.push('/employer/payroll')}
+              >
+                View All Schedules
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -194,19 +220,35 @@ export default function EmployerDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/employer/employees')}
+            >
               <Users className="h-6 w-6 mb-2" />
               Add New Employee
             </Button>
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/employer/payments')}
+            >
               <DollarSign className="h-6 w-6 mb-2" />
               Send Payment
             </Button>
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/employer/payroll')}
+            >
               <Calendar className="h-6 w-6 mb-2" />
               Schedule Payroll
             </Button>
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/employer/analytics')}
+            >
               <TrendingUp className="h-6 w-6 mb-2" />
               View Analytics
             </Button>

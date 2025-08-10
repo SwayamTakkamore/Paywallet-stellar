@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Wallet, TrendingUp, Download, Clock, Eye } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Wallet, TrendingUp, Clock, Download, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { useDashboardStore } from '@/store';
 
 export default function WorkerDashboard() {
   const { stats, loading, fetchWorkerStats } = useDashboardStore();
+  const router = useRouter();
 
   useEffect(() => {
     fetchWorkerStats();
@@ -52,11 +54,18 @@ export default function WorkerDashboard() {
           <p className="text-gray-600">Track your earnings and manage your wallet</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <Button 
+            variant="outline" 
+            className="transition-all duration-200 hover:scale-105 hover:shadow-lg"
+            onClick={() => router.push('/worker/history')}
+          >
             <Eye className="mr-2 h-4 w-4" />
             View History
           </Button>
-          <Button className="transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <Button 
+            className="transition-all duration-200 hover:scale-105 hover:shadow-lg"
+            onClick={() => router.push('/worker/withdraw')}
+          >
             <Download className="mr-2 h-4 w-4" />
             Withdraw Funds
           </Button>
@@ -131,7 +140,13 @@ export default function WorkerDashboard() {
               </TableBody>
             </Table>
             <div className="mt-4">
-              <Button variant="outline" className="w-full">View All Payments</Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => router.push('/worker/history')}
+              >
+                View All Payments
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -155,7 +170,12 @@ export default function WorkerDashboard() {
                     </div>
                     <div className="text-right">
                       <Badge variant="warning">{withdrawal.status}</Badge>
-                      <Button size="sm" variant="outline" className="mt-1 ml-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="mt-1 ml-2"
+                        onClick={() => router.push('/worker/withdraw')}
+                      >
                         Track
                       </Button>
                     </div>
@@ -165,7 +185,12 @@ export default function WorkerDashboard() {
                 <div className="text-center py-8">
                   <Download className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">No pending withdrawals</p>
-                  <Button className="mt-4">Make a Withdrawal</Button>
+                  <Button 
+                    className="mt-4"
+                    onClick={() => router.push('/worker/withdraw')}
+                  >
+                    Make a Withdrawal
+                  </Button>
                 </div>
               )}
             </div>
@@ -208,19 +233,35 @@ export default function WorkerDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/worker/withdraw')}
+            >
               <Download className="h-6 w-6 mb-2" />
               Withdraw Funds
             </Button>
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/worker/history')}
+            >
               <Eye className="h-6 w-6 mb-2" />
               View History
             </Button>
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/worker/history')}
+            >
               <TrendingUp className="h-6 w-6 mb-2" />
               Earnings Report
             </Button>
-            <Button variant="outline" className="h-24 flex-col">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col"
+              onClick={() => router.push('/worker/settings')}
+            >
               <Wallet className="h-6 w-6 mb-2" />
               Wallet Settings
             </Button>
