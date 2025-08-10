@@ -19,10 +19,9 @@ export async function connectDB(): Promise<void> {
   }
 
   try {
-    const mongoUri = database.uri;
+    const mongoUri = database.url || process.env.MONGODB_URI || 'mongodb://localhost:27017/paywallet-stellar';
     
     await mongoose.connect(mongoUri, {
-      dbName: database.name,
       // MongoDB Atlas optimized options
       maxPoolSize: 10, // Connection pool size
       serverSelectionTimeoutMS: 5000, // Timeout for server selection

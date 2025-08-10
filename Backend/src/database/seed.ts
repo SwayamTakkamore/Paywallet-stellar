@@ -5,7 +5,7 @@
 
 import { connectDB, disconnectDB } from './connection';
 import { User, Company, Payroll } from '../models/mongodb/schemas';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 async function seedDatabase() {
   console.log('🌱 Starting MongoDB seed process...');

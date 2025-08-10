@@ -73,7 +73,7 @@ export const releasePayrollSchema = Joi.object({
   releaseType: Joi.string().valid('full', 'partial').default('full'),
   recipientIds: Joi.array().items(Joi.string().uuid()).when('releaseType', {
     is: 'partial',
-    then: Joi.required().min(1),
+    then: Joi.array().required().min(1),
     otherwise: Joi.optional()
   }),
   memo: Joi.string().max(255).optional()

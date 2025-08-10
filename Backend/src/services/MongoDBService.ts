@@ -5,7 +5,7 @@
 
 import { User, Company, Payroll, Transaction, Wallet, IUser, ICompany, IPayroll } from '../models/mongodb/schemas';
 import { Types } from 'mongoose';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export class MongoDBService {
   // User Operations

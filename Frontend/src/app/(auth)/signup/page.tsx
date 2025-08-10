@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField, Select } from '@/components/ui/form';
+import { useAuthStore } from '@/store';
 
 function SignupForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { updateUser, setLoading: setAuthLoading } = useAuthStore();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -38,13 +40,52 @@ function SignupForm() {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to KYC verification
-      router.push('/kyc');
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+      // Call the real API
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Signup failed');
+      }
+
+      if (data.success) {
+        // Store the token
+        if (data.data.token) {
+          localStorage.setItem('auth-token', data.data.token);
+        }
+        
+        // Set user data in auth store
+        useAuthStore.setState({
+          user: data.data.user,
+          token: data.data.token,
+          isAuthenticated: true,
+          loading: false,
+        });
+        
+        // Redirect to dashboard based on role
+        if (formData.role === 'employer') {
+          router.push('/employer');
+        } else {
+          router.push('/worker');
+        }
+      } else {
+        throw new Error(data.message || 'Signup failed');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -58,10 +99,14 @@ function SignupForm() {
   return (
     <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Create your account</h2>
+        <h2 className="text-3xl font-bold text-gray-900">
+          {formData.role === 'employer' ? 'Create Employer Account' : 
+           formData.role === 'worker' ? 'Create Worker Account' : 
+           'Create your account'}
+        </h2>
         <p className="mt-2 text-sm text-gray-600">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-green-600 hover:text-green-500 transition-colors duration-300">
+          <Link href={`/login?type=${formData.role}`} className="font-medium text-green-600 hover:text-green-500 transition-colors duration-300">
             Sign in
           </Link>
         </p>
@@ -172,34 +217,6 @@ function SignupForm() {
           {loading ? 'Creating account...' : 'Create account'}
         </Button>
       </form>
-
-      <div className="mt-6">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">What happens next?</span>
-          </div>
-        </div>
-
-        <div className="mt-4 p-4 bg-blue-50 rounded-md">
-          <div className="text-sm text-blue-800 space-y-2">
-            <div className="flex items-center">
-              <span className="w-6 h-6 bg-blue-200 text-blue-800 rounded-full text-xs font-bold flex items-center justify-center mr-3">1</span>
-              Complete KYC verification
-            </div>
-            <div className="flex items-center">
-              <span className="w-6 h-6 bg-blue-200 text-blue-800 rounded-full text-xs font-bold flex items-center justify-center mr-3">2</span>
-              Set up your wallet
-            </div>
-            <div className="flex items-center">
-              <span className="w-6 h-6 bg-blue-200 text-blue-800 rounded-full text-xs font-bold flex items-center justify-center mr-3">3</span>
-              Start using PayWallet
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

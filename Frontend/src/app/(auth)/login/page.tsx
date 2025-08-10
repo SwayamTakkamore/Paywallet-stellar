@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/ui/form';
 import { useAuthStore } from '@/store';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const roleType = searchParams.get('type') || '';
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,7 +35,7 @@ export default function LoginPage() {
       } else {
         router.push('/worker');
       }
-    } catch (err) {
+    } catch {
       setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
@@ -42,10 +45,14 @@ export default function LoginPage() {
   return (
     <div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-green-900">Sign in to your account</h2>
+        <h2 className="text-3xl font-bold text-green-900">
+          {roleType === 'employer' ? 'Employer Sign In' : 
+           roleType === 'worker' ? 'Worker Sign In' : 
+           'Sign in to your account'}
+        </h2>
         <p className="mt-2 text-sm text-green-700">
           Or{' '}
-          <Link href="/signup" className="font-medium text-green-600 hover:text-green-500 transition-colors duration-300">
+          <Link href={`/signup${roleType ? `?type=${roleType}` : ''}`} className="font-medium text-green-600 hover:text-green-500 transition-colors duration-300">
             create a new account
           </Link>
         </p>

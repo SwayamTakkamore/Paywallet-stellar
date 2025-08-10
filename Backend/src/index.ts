@@ -1,6 +1,6 @@
 /**
  * PayWallet Backend Server
- * Express.js server with MongoDB integration
+ * Main entry point for the Express.js application
  */
 
 import express from 'express';
@@ -8,104 +8,153 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { connectDB } from './database/connection';
-import { config } from './utils/config';
+import { database, getDatabaseConfig } from './utils/database';
+import { logger } from './utils/logger';
+import { PayrollController } from './controllers/PayrollController';
+import { AuthController } from './controllers/AuthController';
+import { authMiddleware, optionalAuthMiddleware } from './utils/auth';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = config.server.port;
+const PORT = process.env.PORT || 3001;
 
-// Security Middleware
+// Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: config.server.corsOrigin,
-  credentials: true
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// Logging middleware
+app.use(morgan('combined', {
+  stream: { write: (message) => logger.info(message.trim()) }
 }));
 
-// Logging Middleware
-app.use(morgan('combined'));
-
-// Body Parser Middleware
+// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health Check Endpoint
-app.get('/api/health', (req, res) => {
+// Initialize controllers
+const payrollController = new PayrollController();
+const authController = new AuthController();
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const dbInfo = database.getConnectionInfo();
   res.json({
-    status: 'OK',
-    message: 'PayWallet API is running',
+    status: 'ok',
     timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    database: 'MongoDB',
-    environment: config.server.nodeEnv
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '1.0.0',
+    database: {
+      connected: dbInfo.isConnected,
+      readyState: dbInfo.readyState
+    }
   });
 });
 
-// API Routes (will be added)
-app.get('/api/test', (req, res) => {
+// API Routes
+
+// Authentication routes (public)
+app.post('/api/auth/signup', authController.signup.bind(authController));
+app.post('/api/auth/login', authController.login.bind(authController));
+app.post('/api/auth/logout', authController.logout.bind(authController));
+
+// User routes (protected)
+app.get('/api/user/profile', authMiddleware, authController.getProfile.bind(authController));
+app.put('/api/user/profile', authMiddleware, authController.updateProfile.bind(authController));
+
+// Stats routes (protected)
+app.get('/api/user/stats/employer', authMiddleware, (req, res) => {
   res.json({
-    message: 'PayWallet MongoDB API is working!',
-    database: 'Connected to MongoDB',
-    timestamp: new Date().toISOString()
+    success: true,
+    data: {
+      totalBalance: 125000,
+      totalEmployees: 12,
+      monthlyPayroll: 85000,
+      pendingPayments: 3
+    }
   });
 });
 
-// 404 Handler
+app.get('/api/user/stats/worker', authMiddleware, (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      availableBalance: 4500,
+      monthlyEarnings: 5000,
+      totalEarnings: 60000,
+      pendingWithdrawals: 1
+    }
+  });
+});
+
+// Payroll routes (protected)
+app.get('/api/payrolls', authMiddleware, payrollController.getPayrolls);
+app.post('/api/payrolls', authMiddleware, payrollController.createPayroll);
+app.get('/api/payrolls/:id', authMiddleware, payrollController.getPayroll);
+app.post('/api/payrolls/:id/fund', authMiddleware, payrollController.fundPayroll);
+app.post('/api/payrolls/:id/release', authMiddleware, payrollController.releasePayroll);
+app.get('/api/payrolls/:id/recipients', authMiddleware, payrollController.getPayrollRecipients);
+
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('Unhandled error:', err);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'API endpoint not found',
-    path: req.originalUrl
-  });
+  res.status(404).json({ error: 'Endpoint not found' });
 });
 
-// Global Error Handler
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('💥 Server Error:', error);
-  
-  res.status(error.status || 500).json({
-    success: false,
-    message: error.message || 'Internal Server Error',
-    ...(config.server.nodeEnv === 'development' && { stack: error.stack })
-  });
-});
-
-// Start Server
+// Start server
 async function startServer() {
   try {
     // Connect to MongoDB
-    await connectDB();
-    console.log('🎯 MongoDB connection established');
-
-    // Start Express Server
+    const dbConfig = getDatabaseConfig();
+    await database.connect(dbConfig);
+    
+    // Start HTTP server
     app.listen(PORT, () => {
-      console.log(`
-🚀 PayWallet Backend Server Started!
-┌─────────────────────────────────────┐
-│  Environment: ${config.server.nodeEnv.padEnd(20)} │
-│  Port: ${PORT.toString().padEnd(26)} │  
-│  Database: MongoDB                  │
-│  API URL: http://localhost:${PORT}/api │
-└─────────────────────────────────────┘
-      `);
+      logger.info(`🚀 PayWallet Backend Server started on port ${PORT}`, {
+        environment: process.env.NODE_ENV || 'development',
+        port: PORT,
+        database: 'MongoDB'
+      });
+      logger.info(`📍 API available at: http://localhost:${PORT}/api`);
+      logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
+      
+      if (process.env.NODE_ENV === 'development') {
+        logger.info('🔧 Development mode enabled');
+      }
     });
-
+    
   } catch (error) {
-    console.error('💥 Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
 
-// Graceful Shutdown
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received. Shutting down gracefully...');
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  await database.disconnect();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received. Shutting down gracefully...');
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  await database.disconnect();
   process.exit(0);
 });
 

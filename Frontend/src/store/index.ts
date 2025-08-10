@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AuthState, User, NotificationItem } from '@/types';
-import { demoApiClient } from '@/lib/api';
 
 // Auth Store
 interface AuthStore extends AuthState {
@@ -22,14 +21,34 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email: string, password: string) => {
         set({ loading: true });
         try {
-          const response = await demoApiClient.login({ email, password });
-          if (response.success) {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Login failed');
+          }
+
+          if (data.success) {
+            // Store token in localStorage
+            if (data.data.token) {
+              localStorage.setItem('auth-token', data.data.token);
+            }
+
             set({
-              user: response.data.user,
-              token: response.data.token,
+              user: data.data.user,
+              token: data.data.token,
               isAuthenticated: true,
               loading: false,
             });
+          } else {
+            throw new Error(data.message || 'Login failed');
           }
         } catch (error) {
           set({ loading: false });
@@ -80,7 +99,7 @@ interface AppStore {
   clearNotifications: () => void;
 }
 
-export const useAppStore = create<AppStore>((set, get) => ({
+export const useAppStore = create<AppStore>((set) => ({
   sidebarOpen: false,
   notifications: [],
   unreadCount: 0,
@@ -138,11 +157,24 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   fetchEmployerStats: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await demoApiClient.getEmployerStats();
-      if (response.success) {
-        set({ stats: response.data, loading: false });
+      const token = useAuthStore.getState().token;
+      const response = await fetch('/api/user/stats/employer', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch employer stats');
       }
-    } catch (error) {
+
+      if (data.success) {
+        set({ stats: data.data, loading: false });
+      }
+    } catch {
       set({ error: 'Failed to fetch stats', loading: false });
     }
   },
@@ -150,11 +182,24 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   fetchWorkerStats: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await demoApiClient.getWorkerStats();
-      if (response.success) {
-        set({ stats: response.data, loading: false });
+      const token = useAuthStore.getState().token;
+      const response = await fetch('/api/user/stats/worker', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch worker stats');
       }
-    } catch (error) {
+
+      if (data.success) {
+        set({ stats: data.data, loading: false });
+      }
+    } catch {
       set({ error: 'Failed to fetch stats', loading: false });
     }
   },

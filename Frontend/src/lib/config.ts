@@ -71,21 +71,6 @@ export const paymentGateways = {
     applicationId: getEnvVar('NEXT_PUBLIC_SQUARE_APPLICATION_ID'),
   },
 };
-// Payment Gateway Configuration
-export const paymentGateways = {
-  stripe: {
-    publishableKey: getEnvVar('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
-  },
-  paypal: {
-    clientId: getEnvVar('NEXT_PUBLIC_PAYPAL_CLIENT_ID'),
-  },
-  razorpay: {
-    keyId: getEnvVar('NEXT_PUBLIC_RAZORPAY_KEY_ID'),
-  },
-  square: {
-    applicationId: getEnvVar('NEXT_PUBLIC_SQUARE_APPLICATION_ID'),
-  },
-};
 
 // External Services
 export const externalServices = {
@@ -126,70 +111,6 @@ export const externalServices = {
     config: getEnvVar('NEXT_PUBLIC_FIREBASE_CONFIG'),
     vapidPublicKey: getEnvVar('NEXT_PUBLIC_VAPID_PUBLIC_KEY'),
   },
-};vironment variables
- */
-
-// Validation helper for client-side environment variables
-function getEnvVar(key: string, defaultValue?: string): string {
-  const value = process.env[key] || defaultValue;
-  return value || '';
-}
-
-// API Configuration
-export const apiConfig = {
-  baseUrl: getEnvVar('NEXT_PUBLIC_API_URL', 'http://localhost:3001/api'),
-  apiBaseUrl: getEnvVar('NEXT_PUBLIC_API_BASE_URL', 'http://localhost:3001'),
-  timeout: 10000, // 10 seconds
-};
-
-// Stellar Configuration
-export const stellarConfig = {
-  network: getEnvVar('NEXT_PUBLIC_STELLAR_NETWORK', 'testnet'),
-  horizonUrl: getEnvVar('NEXT_PUBLIC_STELLAR_HORIZON_URL', 'https://horizon-testnet.stellar.org'),
-  sorobanRpcUrl: getEnvVar('NEXT_PUBLIC_SOROBAN_RPC_URL', 'https://soroban-testnet.stellar.org'),
-  networkPassphrase: getEnvVar('NEXT_PUBLIC_SOROBAN_NETWORK_PASSPHRASE', 'Test SDF Network ; September 2015'),
-};
-
-// Contract Configuration
-export const contractConfig = {
-  payrollContractId: getEnvVar('NEXT_PUBLIC_PAYROLL_CONTRACT_ID'),
-  usdcContractId: getEnvVar('NEXT_PUBLIC_USDC_CONTRACT_ID'),
-};
-
-// Asset Configuration
-export const assetConfig = {
-  usdc: {
-    code: getEnvVar('NEXT_PUBLIC_USDC_ASSET_CODE', 'USDC'),
-    issuer: getEnvVar('NEXT_PUBLIC_USDC_ISSUER', 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'),
-  },
-};
-
-// App Configuration
-export const appConfig = {
-  name: getEnvVar('NEXT_PUBLIC_APP_NAME', 'PayWallet'),
-  version: getEnvVar('NEXT_PUBLIC_APP_VERSION', '1.0.0'),
-  url: getEnvVar('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
-  deploymentEnv: getEnvVar('NEXT_PUBLIC_DEPLOYMENT_ENV', 'development'),
-};
-
-// Feature Flags
-export const features = {
-  enableStreaming: getEnvVar('NEXT_PUBLIC_ENABLE_STREAMING', 'true') === 'true',
-  enableMultiCurrency: getEnvVar('NEXT_PUBLIC_ENABLE_MULTI_CURRENCY', 'true') === 'true',
-  enableKYC: getEnvVar('NEXT_PUBLIC_ENABLE_KYC', 'true') === 'true',
-  enableAnalytics: getEnvVar('NEXT_PUBLIC_ENABLE_ANALYTICS', 'true') === 'true',
-  debugMode: getEnvVar('NEXT_PUBLIC_DEBUG_MODE', 'false') === 'true',
-  enableMockData: getEnvVar('NEXT_PUBLIC_ENABLE_MOCK_DATA', 'false') === 'true',
-};
-
-// External Services
-export const externalServices = {
-  googleAnalyticsId: getEnvVar('NEXT_PUBLIC_GOOGLE_ANALYTICS_ID'),
-  sentryDsn: getEnvVar('NEXT_PUBLIC_SENTRY_DSN'),
-  walletConnectProjectId: getEnvVar('NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID'),
-  googleClientId: getEnvVar('NEXT_PUBLIC_GOOGLE_CLIENT_ID'),
-  githubClientId: getEnvVar('NEXT_PUBLIC_GITHUB_CLIENT_ID'),
-  mapboxToken: getEnvVar('NEXT_PUBLIC_MAPBOX_TOKEN'),
 };
 
 // Development helpers

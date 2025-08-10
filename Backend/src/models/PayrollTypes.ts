@@ -4,10 +4,12 @@
 
 export interface PayrollRecipient {
   id?: string;
-  walletAddress: string;
+  walletAddress?: string;
+  stellarAddress: string;
   employeeId: string;
   amount: number;
-  currency: string;
+  currency?: string;
+  asset: string;
   name?: string;
   email?: string;
 }
@@ -23,9 +25,12 @@ export interface PayrollSchedule {
 export interface PayrollCreateRequest {
   title: string;
   description?: string;
+  companyId: string;
+  employerId: string;
   recipients: PayrollRecipient[];
   totalAmount: number;
   asset?: string; // Default: USDC
+  assetIssuer?: string;
   schedule: PayrollSchedule;
   metadata?: Record<string, any>;
 }
@@ -48,20 +53,29 @@ export interface PayrollResponse {
   title: string;
   description?: string;
   employerId: string;
+  companyId?: string;
+  companyName?: string;
   contractId: string;
   escrowAccount?: string;
   totalAmount: number;
   fundedAmount?: number;
   asset: string;
+  assetIssuer?: string;
   status: PayrollStatus;
   schedule: PayrollSchedule;
   recipients: PayrollRecipient[];
+  txHash?: string;
+  fundingTxHash?: string;
+  distributionTxHashes?: string[];
+  errorMessage?: string;
+  releaseDate?: Date;
+  metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
   fundedAt?: Date;
+  distributedAt?: Date;
+  cancelledAt?: Date;
   releasedAt?: Date;
-  txHash?: string;
-  metadata?: Record<string, any>;
 }
 
 export interface PayrollRecipientsResponse {

@@ -14,6 +14,15 @@ import {
   ReleasePayrollRequest 
 } from '../models/PayrollTypes';
 
+// Helper function to assert user authentication
+function assertUserAuth(req: Request): { employerId: string } {
+  const employerId = req.user?.id;
+  if (!employerId) {
+    throw new Error('Unauthorized');
+  }
+  return { employerId };
+}
+
 export class PayrollController {
   private payrollService: PayrollService;
   private stellarService: StellarService;
@@ -52,13 +61,7 @@ export class PayrollController {
       });
 
       // Store payroll data in database
-      const payroll = await this.payrollService.createPayroll({
-        ...payrollData,
-        employerId,
-        contractId: contractResult.contractId,
-        txHash: contractResult.txHash,
-        status: 'created'
-      });
+      const payroll = await this.payrollService.createPayroll(payrollData);
 
       res.status(201).json({
         success: true,
@@ -85,7 +88,14 @@ export class PayrollController {
   getPayroll = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const employerId = req.user?.id;
+      
+      let employerId: string;
+      try {
+        ({ employerId } = assertUserAuth(req));
+      } catch {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
 
       const payroll = await this.payrollService.getPayrollById(id, employerId);
       

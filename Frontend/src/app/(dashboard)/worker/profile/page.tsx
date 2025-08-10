@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, Mail, Phone, MapPin, Building, Calendar, Edit, Save, X } from 'lucide-react';
+import { useAuthStore } from '@/store';
 
 interface UserProfile {
   id: string;
@@ -25,34 +26,43 @@ interface UserProfile {
   emergencyPhone: string;
 }
 
-const mockProfile: UserProfile = {
-  id: '1',
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'john.doe@example.com',
-  phone: '+1 (555) 123-4567',
-  address: '123 Main Street, Apt 4B',
-  city: 'New York',
-  country: 'United States',
-  postalCode: '10001',
-  company: 'TechCorp Inc.',
-  position: 'Software Engineer',
-  department: 'Engineering',
-  startDate: '2023-06-15',
-  walletAddress: '0xAbC123...DeF456',
-  bankAccount: 'xxxx-xxxx-xxxx-1234',
-  emergencyContact: 'Jane Doe',
-  emergencyPhone: '+1 (555) 987-6543'
-};
-
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile>(mockProfile);
+  const { user } = useAuthStore();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Initialize profile with real user data
+  useEffect(() => {
+    if (user) {
+      const userProfile: UserProfile = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: '', // These fields can be filled later or fetched from a more detailed profile API
+        address: '',
+        city: '',
+        country: '',
+        postalCode: '',
+        company: '',
+        position: '',
+        department: '',
+        startDate: user.createdAt,
+        walletAddress: user.walletAddress || '',
+        bankAccount: '',
+        emergencyContact: '',
+        emergencyPhone: ''
+      };
+      setProfile(userProfile);
+    }
+  }, [user]);
+
   const updateProfile = (field: keyof UserProfile, value: string) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-    setHasChanges(true);
+    if (profile) {
+      setProfile(prev => prev ? { ...prev, [field]: value } : null);
+      setHasChanges(true);
+    }
   };
 
   const handleSave = () => {
@@ -63,10 +73,43 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
-    setProfile(mockProfile); // Reset to original
+    // Reset to original user data
+    if (user) {
+      const userProfile: UserProfile = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: '',
+        address: '',
+        city: '',
+        country: '',
+        postalCode: '',
+        company: '',
+        position: '',
+        department: '',
+        startDate: user.createdAt,
+        walletAddress: user.walletAddress || '',
+        bankAccount: '',
+        emergencyContact: '',
+        emergencyPhone: ''
+      };
+      setProfile(userProfile);
+    }
     setHasChanges(false);
     setIsEditing(false);
   };
+
+  // Show loading if profile is not loaded yet
+  if (!profile) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-gray-600">Loading profile...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
