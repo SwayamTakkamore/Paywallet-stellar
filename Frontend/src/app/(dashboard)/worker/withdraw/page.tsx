@@ -69,6 +69,7 @@ export default function WithdrawPage() {
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [withdrawMethod, setWithdrawMethod] = useState<'bank' | 'crypto' | 'card'>('bank');
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -109,7 +110,7 @@ export default function WithdrawPage() {
     }
   };
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
       alert('Please enter a valid amount');
       return;
@@ -119,10 +120,24 @@ export default function WithdrawPage() {
       return;
     }
     
-    // Here you would typically call an API
-    console.log('Withdrawing:', withdrawAmount, 'via', withdrawMethod);
-    setShowWithdrawForm(false);
-    setWithdrawAmount('');
+    try {
+      setWithdrawing(true);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Here you would typically call an API
+      console.log('Withdrawing:', withdrawAmount, 'via', withdrawMethod);
+      
+      // Show success and close modal
+      alert(`Successfully initiated withdrawal of $${withdrawAmount} via ${withdrawMethod}`);
+      setShowWithdrawForm(false);
+      setWithdrawAmount('');
+    } catch (error) {
+      console.error('Withdrawal failed:', error);
+      alert('Withdrawal failed. Please try again.');
+    } finally {
+      setWithdrawing(false);
+    }
   };
 
   return (
@@ -273,8 +288,16 @@ export default function WithdrawPage() {
               <Button 
                 onClick={handleWithdraw}
                 className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={withdrawing}
               >
-                Confirm Withdrawal
+                {withdrawing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Withdrawal'
+                )}
               </Button>
               <Button 
                 variant="outline"

@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Modal, ModalContent, ModalHeader, ModalTitle, ModalClose, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { FormField, Select } from '@/components/ui/form';
 import { Send, ArrowUpRight, Search, Filter, Download, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 interface Payment {
@@ -21,7 +24,7 @@ interface Payment {
 const mockPayments: Payment[] = [
   {
     id: '1',
-    recipient: 'John Smith',
+    recipient: 'Rash Hehe',
     amount: 3500,
     currency: 'USDC',
     type: 'salary',
@@ -64,6 +67,75 @@ const mockPayments: Payment[] = [
 export default function PaymentsPage() {
   const [payments] = useState<Payment[]>(mockPayments);
   const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'failed'>('all');
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendingPayment, setSendingPayment] = useState(false);
+  const [newPayment, setNewPayment] = useState({
+    recipient: '',
+    amount: '',
+    currency: 'USDC',
+    type: 'salary',
+    description: '',
+  });
+
+  // Mock employees data
+  const employees = [
+    { value: 'john-smith', label: 'Rash Hehe' },
+    { value: 'jane-doe', label: 'Yash' },
+    { value: 'mike-johnson', label: 'Swayam' },
+    { value: 'sarah-wilson', label: 'Devansh' },
+    { value: 'tom-brown', label: 'Devansh' },
+  ];
+
+  const paymentTypes = [
+    { value: 'salary', label: 'Salary' },
+    { value: 'bonus', label: 'Bonus' },
+    { value: 'reimbursement', label: 'Reimbursement' },
+  ];
+
+  const currencies = [
+    { value: 'USDC', label: 'USDC' },
+    { value: 'XLM', label: 'XLM (Stellar Lumens)' },
+    { value: 'USD', label: 'USD' },
+  ];
+
+  const handleInputChange = (field: string, value: string) => {
+    setNewPayment(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSendPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingPayment(true);
+    
+    try {
+      // Mock payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Show success message
+      alert(`✅ Payment sent successfully!
+      
+Recipient: ${newPayment.recipient}
+Amount: ${newPayment.amount} ${newPayment.currency}
+Type: ${newPayment.type}
+Description: ${newPayment.description || 'No description'}
+
+Transaction will appear in the payments list shortly.`);
+      
+      // Reset form and close modal
+      setNewPayment({
+        recipient: '',
+        amount: '',
+        currency: 'USDC',
+        type: 'salary',
+        description: '',
+      });
+      setShowSendModal(false);
+    } catch (error) {
+      alert('❌ Failed to send payment. Please try again.');
+      console.error('Payment error:', error);
+    } finally {
+      setSendingPayment(false);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -124,7 +196,10 @@ export default function PaymentsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
           <p className="text-gray-600">Track and manage all employee payments</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">
+        <Button 
+          className="bg-green-600 hover:bg-green-700"
+          onClick={() => setShowSendModal(true)}
+        >
           <Send className="w-4 h-4 mr-2" />
           Send Payment
         </Button>
@@ -301,6 +376,104 @@ export default function PaymentsPage() {
           </table>
         </div>
       </Card>
+
+      {/* Send Payment Modal */}
+      <Modal open={showSendModal} onOpenChange={setShowSendModal}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>Send Payment</ModalTitle>
+            <ModalClose onClose={() => setShowSendModal(false)} />
+          </ModalHeader>
+          
+          <form onSubmit={handleSendPayment}>
+            <ModalBody className="space-y-4">
+              <FormField label="Select Employee" required>
+                <Select
+                  value={newPayment.recipient}
+                  onChange={(e) => handleInputChange('recipient', e.target.value)}
+                  options={employees}
+                  placeholder="Choose employee"
+                />
+              </FormField>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Amount" required>
+                  <Input
+                    type="number"
+                    value={newPayment.amount}
+                    onChange={(e) => handleInputChange('amount', e.target.value)}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </FormField>
+
+                <FormField label="Currency" required>
+                  <Select
+                    value={newPayment.currency}
+                    onChange={(e) => handleInputChange('currency', e.target.value)}
+                    options={currencies}
+                  />
+                </FormField>
+              </div>
+
+              <FormField label="Payment Type" required>
+                <Select
+                  value={newPayment.type}
+                  onChange={(e) => handleInputChange('type', e.target.value)}
+                  options={paymentTypes}
+                />
+              </FormField>
+
+              <FormField label="Description (Optional)">
+                <Input
+                  value={newPayment.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Payment description..."
+                />
+              </FormField>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">Payment Summary</h4>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p><strong>Recipient:</strong> {newPayment.recipient || 'Not selected'}</p>
+                  <p><strong>Amount:</strong> {newPayment.amount || '0.00'} {newPayment.currency}</p>
+                  <p><strong>Type:</strong> {newPayment.type}</p>
+                  <p><strong>Description:</strong> {newPayment.description || 'No description'}</p>
+                </div>
+              </div>
+            </ModalBody>
+            
+            <ModalFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSendModal(false)} 
+                type="button"
+                disabled={sendingPayment}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={sendingPayment || !newPayment.recipient || !newPayment.amount}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {sendingPayment ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Payment
+                  </>
+                )}
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

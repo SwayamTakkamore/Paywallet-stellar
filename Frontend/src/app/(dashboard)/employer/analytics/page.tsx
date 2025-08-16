@@ -46,6 +46,48 @@ const mockAnalytics: AnalyticsData = {
 export default function AnalyticsPage() {
   const [analytics] = useState<AnalyticsData>(mockAnalytics);
   const [timeRange, setTimeRange] = useState('6months');
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportReport = async () => {
+    try {
+      setExporting(true);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const reportData = `Analytics Report - ${timeRange}
+Generated on: ${new Date().toLocaleDateString()}
+
+Summary:
+Total Payroll: $${analytics.totalPayroll.toLocaleString()}
+Total Employees: ${analytics.totalEmployees}
+Average Salary: $${analytics.averageSalary}
+Payroll Growth: ${analytics.payrollGrowth}%
+
+Monthly Data:
+${analytics.monthlyData.map(item => 
+  `${item.month}: $${item.amount.toLocaleString()} (${item.employees} employees)`
+).join('\n')}
+
+Department Breakdown:
+${analytics.departmentData.map(dept => 
+  `${dept.department}: ${dept.employees} employees, $${dept.totalSalary.toLocaleString()}`
+).join('\n')}`;
+
+      const blob = new Blob([reportData], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `analytics-report-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-500">
@@ -65,9 +107,23 @@ export default function AnalyticsPage() {
             <option value="6months">Last 6 Months</option>
             <option value="1year">Last Year</option>
           </select>
-          <Button variant="outline" className="hover:scale-105 transition-transform">
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
+          <Button 
+            variant="outline" 
+            className="hover:scale-105 transition-transform"
+            onClick={handleExportReport}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                Export Report
+              </>
+            )}
           </Button>
         </div>
       </div>

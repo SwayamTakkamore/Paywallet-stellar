@@ -98,6 +98,7 @@ export default function SalaryHistoryPage() {
   const [salaryHistory] = useState<SalaryRecord[]>(mockSalaryHistory);
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'processing'>('all');
   const [yearFilter, setYearFilter] = useState<string>('2025');
+  const [exporting, setExporting] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -117,6 +118,62 @@ export default function SalaryHistoryPage() {
     const yearMatch = yearFilter === 'all' || record.year.toString() === yearFilter;
     return statusMatch && yearMatch;
   });
+
+  const handleExportHistory = async () => {
+    try {
+      setExporting(true);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const csvContent = `Month,Year,Gross Salary,Deductions,Net Salary,Currency,Status,Payment Date,Transaction Hash
+${filteredHistory.map(record => 
+  `${record.month},${record.year},$${record.grossSalary},$${record.deductions},$${record.netSalary},${record.currency},${record.status},${record.paymentDate},${record.transactionHash || 'N/A'}`
+).join('\n')}`;
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `salary-history-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDownloadPayslip = async (record: SalaryRecord) => {
+    try {
+      const payslipContent = `
+PAYSLIP - ${record.month} ${record.year}
+
+Gross Salary: $${record.grossSalary}
+Deductions: $${record.deductions}
+Net Salary: $${record.netSalary}
+Currency: ${record.currency}
+Payment Date: ${record.paymentDate}
+Transaction Hash: ${record.transactionHash || 'N/A'}
+Status: ${record.status.toUpperCase()}
+`;
+
+      const blob = new Blob([payslipContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `payslip-${record.month}-${record.year}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
 
   const totalEarned = salaryHistory
     .filter(r => r.status === 'paid')
@@ -138,9 +195,23 @@ export default function SalaryHistoryPage() {
           <h1 className="text-2xl font-bold text-gray-900">Salary History</h1>
           <p className="text-gray-600">View your payment history and earnings</p>
         </div>
-        <Button variant="outline" className="hover:scale-105 transition-transform">
-          <Download className="w-4 h-4 mr-2" />
-          Export History
+        <Button 
+          variant="outline" 
+          className="hover:scale-105 transition-transform"
+          onClick={handleExportHistory}
+          disabled={exporting}
+        >
+          {exporting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+              Exporting...
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 mr-2" />
+              Export History
+            </>
+          )}
         </Button>
       </div>
 
@@ -322,8 +393,20 @@ export default function SalaryHistoryPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button className="text-green-600 hover:text-green-900">View</button>
-                      <button className="text-blue-600 hover:text-blue-900">Download</button>
+                      <button 
+                        className="text-green-600 hover:text-green-900"
+                        onClick={() => {
+                          alert(`Viewing details for ${record.month} ${record.year}`);
+                        }}
+                      >
+                        View
+                      </button>
+                      <button 
+                        className="text-blue-600 hover:text-blue-900"
+                        onClick={() => handleDownloadPayslip(record)}
+                      >
+                        Download
+                      </button>
                     </div>
                   </td>
                 </tr>

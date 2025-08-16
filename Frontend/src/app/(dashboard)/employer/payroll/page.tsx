@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Plus, Search, Filter, Download, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Modal, ModalContent, ModalHeader, ModalTitle, ModalClose, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { Calendar, Plus, Search, Filter, Download, CheckCircle, Clock, AlertCircle, Eye, Edit, FileDown } from 'lucide-react';
 
 interface PayrollEntry {
   id: string;
@@ -49,6 +50,11 @@ const mockPayrollData: PayrollEntry[] = [
 export default function PayrollPage() {
   const [payrollData] = useState<PayrollEntry[]>(mockPayrollData);
   const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'failed'>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedPayroll, setSelectedPayroll] = useState<PayrollEntry | null>(null);
+  const [exporting, setExporting] = useState(false);
   const router = useRouter();
 
   const getStatusIcon = (status: string) => {
@@ -81,6 +87,74 @@ export default function PayrollPage() {
     filter === 'all' || entry.status === filter
   );
 
+  const handleCreatePayroll = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleViewPayroll = (payroll: PayrollEntry) => {
+    setSelectedPayroll(payroll);
+    setShowViewModal(true);
+  };
+
+  const handleEditPayroll = (payroll: PayrollEntry) => {
+    setSelectedPayroll(payroll);
+    setShowEditModal(true);
+  };
+
+  const handleDownloadPayroll = async (payroll: PayrollEntry) => {
+    try {
+      setExporting(true);
+      // Simulate download process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Create a mock CSV download
+      const csvContent = `Period,Total Amount,Employees,Status,Created Date
+${payroll.period},$${payroll.totalAmount},${payroll.employeesCount},${payroll.status},${payroll.createdAt}`;
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `payroll-${payroll.period.replace(' ', '-')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportAll = async () => {
+    try {
+      setExporting(true);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const csvContent = `Period,Total Amount,Employees,Status,Created Date
+${filteredPayroll.map(entry => 
+  `${entry.period},$${entry.totalAmount},${entry.employeesCount},${entry.status},${entry.createdAt}`
+).join('\n')}`;
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'payroll-export.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -91,10 +165,7 @@ export default function PayrollPage() {
         </div>
         <Button 
           className="bg-green-600 hover:bg-green-700"
-          onClick={() => {
-            // For now, just alert. In future, this would open a modal
-            alert('Create Payroll functionality will be implemented soon!');
-          }}
+          onClick={handleCreatePayroll}
         >
           <Plus className="w-4 h-4 mr-2" />
           Create Payroll
@@ -174,12 +245,20 @@ export default function PayrollPage() {
             </select>
             <Button 
               variant="outline"
-              onClick={() => {
-                alert('Filter functionality will be implemented soon!');
-              }}
+              onClick={handleExportAll}
+              disabled={exporting}
             >
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
+              {exporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filter
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -191,12 +270,20 @@ export default function PayrollPage() {
           <h3 className="text-lg font-semibold text-gray-900">Payroll History</h3>
           <Button 
             variant="outline"
-            onClick={() => {
-              alert('Export functionality will be implemented soon!');
-            }}
+            onClick={handleExportAll}
+            disabled={exporting}
           >
-            <Download className="w-4 h-4 mr-2" />
-            Export
+            {exporting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </>
+            )}
           </Button>
         </div>
 
@@ -252,22 +339,26 @@ export default function PayrollPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button 
-                        className="text-green-600 hover:text-green-900"
-                        onClick={() => alert(`Viewing payroll ${entry.period}`)}
+                        className="text-green-600 hover:text-green-900 flex items-center"
+                        onClick={() => handleViewPayroll(entry)}
                       >
+                        <Eye className="w-4 h-4 mr-1" />
                         View
                       </button>
                       <button 
-                        className="text-blue-600 hover:text-blue-900"
-                        onClick={() => alert(`Editing payroll ${entry.period}`)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center"
+                        onClick={() => handleEditPayroll(entry)}
                       >
+                        <Edit className="w-4 h-4 mr-1" />
                         Edit
                       </button>
                       {entry.status === 'completed' && (
                         <button 
-                          className="text-gray-600 hover:text-gray-900"
-                          onClick={() => alert(`Downloading payroll ${entry.period}`)}
+                          className="text-gray-600 hover:text-gray-900 flex items-center"
+                          onClick={() => handleDownloadPayroll(entry)}
+                          disabled={exporting}
                         >
+                          <FileDown className="w-4 h-4 mr-1" />
                           Download
                         </button>
                       )}
@@ -279,6 +370,154 @@ export default function PayrollPage() {
           </table>
         </div>
       </Card>
+
+      {/* Create Payroll Modal */}
+      <Modal open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>Create New Payroll</ModalTitle>
+            <ModalClose onClose={() => setShowCreateModal(false)} />
+          </ModalHeader>
+          <ModalBody>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pay Period
+                </label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <option>February 2025</option>
+                  <option>March 2025</option>
+                  <option>April 2025</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Date
+                </label>
+                <input 
+                  type="date" 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+                <div className="text-sm text-gray-600">
+                  <p>Total Employees: 15</p>
+                  <p>Estimated Total: $45,000</p>
+                </div>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-green-600 hover:bg-green-700">
+              Create Payroll
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* View Payroll Modal */}
+      <Modal open={showViewModal} onOpenChange={setShowViewModal}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>Payroll Details - {selectedPayroll?.period}</ModalTitle>
+            <ModalClose onClose={() => setShowViewModal(false)} />
+          </ModalHeader>
+          <ModalBody>
+            {selectedPayroll && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Period</h4>
+                    <p className="text-gray-600">{selectedPayroll.period}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Status</h4>
+                    <Badge className={getStatusColor(selectedPayroll.status)}>
+                      {getStatusIcon(selectedPayroll.status)}
+                      <span className="ml-1 capitalize">{selectedPayroll.status}</span>
+                    </Badge>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Total Amount</h4>
+                    <p className="text-gray-600">${selectedPayroll.totalAmount.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Employees</h4>
+                    <p className="text-gray-600">{selectedPayroll.employeesCount} employees</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Created Date</h4>
+                    <p className="text-gray-600">{new Date(selectedPayroll.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  {selectedPayroll.processedAt && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-1">Processed Date</h4>
+                      <p className="text-gray-600">{new Date(selectedPayroll.processedAt).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setShowViewModal(false)}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Payroll Modal */}
+      <Modal open={showEditModal} onOpenChange={setShowEditModal}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>Edit Payroll - {selectedPayroll?.period}</ModalTitle>
+            <ModalClose onClose={() => setShowEditModal(false)} />
+          </ModalHeader>
+          <ModalBody>
+            {selectedPayroll && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    defaultValue={selectedPayroll.status}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Add any notes about this payroll..."
+                  />
+                </div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              Save Changes
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

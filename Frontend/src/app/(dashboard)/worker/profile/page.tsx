@@ -31,6 +31,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Initialize profile with real user data
   useEffect(() => {
@@ -65,11 +66,24 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = () => {
-    // Here you would typically save to API
-    console.log('Saving profile:', profile);
-    setHasChanges(false);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Here you would typically save to API
+      console.log('Saving profile:', profile);
+      setHasChanges(false);
+      setIsEditing(false);
+      
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      alert('Failed to save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -132,10 +146,19 @@ export default function ProfilePage() {
               <Button 
                 onClick={handleSave}
                 className="bg-green-600 hover:bg-green-700"
-                disabled={!hasChanges}
+                disabled={!hasChanges || saving}
               >
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
               </Button>
             </>
           ) : (

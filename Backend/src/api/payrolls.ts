@@ -1,6 +1,7 @@
 /**
  * Payrolls API Routes
  * Handles payroll creation, funding, release, and management
+ * Also handles employee management
  */
 
 import { Router } from 'express';
@@ -15,6 +16,61 @@ import {
 
 const router = Router();
 const payrollController = new PayrollController();
+
+// =============================================================================
+// EMPLOYEE MANAGEMENT ROUTES
+// =============================================================================
+
+/**
+ * POST /api/payrolls/employees
+ * Add a new employee
+ * @body {EmployeeCreateRequest}
+ * @returns {EmployeeResponse}
+ */
+router.post(
+  '/employees',
+  authMiddleware,
+  payrollController.addEmployee
+);
+
+/**
+ * GET /api/payrolls/employees
+ * Get all employees for authenticated employer
+ * @returns {EmployeeListResponse}
+ */
+router.get(
+  '/employees',
+  authMiddleware,
+  payrollController.getEmployees
+);
+
+/**
+ * PUT /api/payrolls/employees/:id
+ * Update an employee
+ * @param {string} id - Employee ID
+ * @body {EmployeeUpdateRequest}
+ * @returns {EmployeeResponse}
+ */
+router.put(
+  '/employees/:id',
+  authMiddleware,
+  payrollController.updateEmployee
+);
+
+/**
+ * GET /api/payrolls/employees/stats
+ * Get employee statistics
+ * @returns {EmployeeStatsResponse}
+ */
+router.get(
+  '/employees/stats',
+  authMiddleware,
+  payrollController.getEmployeeStats
+);
+
+// =============================================================================
+// PAYROLL ROUTES
+// =============================================================================
 
 /**
  * POST /api/payrolls

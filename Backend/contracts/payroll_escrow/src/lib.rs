@@ -36,6 +36,32 @@ pub struct Recipient {
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Employee {
+    pub id: u64,
+    pub employer: Address,
+    pub wallet_address: Address,
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub position: String,
+    pub salary: u64,
+    pub currency: String,
+    pub payment_schedule: String, // "weekly", "bi-weekly", "monthly"
+    pub status: EmployeeStatus,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum EmployeeStatus {
+    Active,
+    Inactive,
+    Terminated,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PayrollStatus {
     Created,
     Funded,
@@ -104,6 +130,7 @@ pub enum Error {
 // Storage keys
 const PAYROLL_COUNTER: &str = "PAYROLL_CTR";
 const STREAM_COUNTER: &str = "STREAM_CTR";
+const EMPLOYEE_COUNTER: &str = "EMPLOYEE_CTR";
 const CIRCUIT_BREAKER: &str = "BREAKER";
 const ADMIN: &str = "ADMIN";
 
@@ -120,6 +147,7 @@ impl PayrollEscrowContract {
         env.storage().instance().set(&CIRCUIT_BREAKER, &false);
         env.storage().instance().set(&PAYROLL_COUNTER, &0u64);
         env.storage().instance().set(&STREAM_COUNTER, &0u64);
+        env.storage().instance().set(&EMPLOYEE_COUNTER, &0u64);
     }
 
     /// Create a new payroll escrow
@@ -485,5 +513,218 @@ impl PayrollEscrowContract {
         );
 
         Ok(new_state)
+    }
+
+    // =============================================================================
+    // EMPLOYEE MANAGEMENT FUNCTIONS
+    // =============================================================================
+
+    /// Add a new employee to the system
+    pub fn add_employee(
+        env: Env,
+        employer: Address,
+        wallet_address: Address,
+        email: String,
+        first_name: String,
+        last_name: String,
+        position: String,
+        salary: u64,
+        currency: String,
+        payment_schedule: String,
+    ) -> Result<u64, Error> {
+        employer.require_auth();
+
+        // Check circuit breaker
+        let breaker_active: bool = env.storage().instance().get(&CIRCUIT_BREAKER).unwrap_or(false);
+        if breaker_active {
+            return Err(Error::CircuitBreakerActive);
+        }
+
+        // Get and increment employee counter
+        let mut employee_counter: u64 = env.storage().instance()
+            .get(&EMPLOYEE_COUNTER)
+            .unwrap_or(0);
+        employee_counter += 1;
+
+        let current_time = env.ledger().timestamp();
+
+        // Create employee data
+        let employee = Employee {
+            id: employee_counter,
+            employer: employer.clone(),
+            wallet_address: wallet_address.clone(),
+            email: email.clone(),
+            first_name: first_name.clone(),
+            last_name: last_name.clone(),
+            position: position.clone(),
+            salary,
+            currency: currency.clone(),
+            payment_schedule: payment_schedule.clone(),
+            status: EmployeeStatus::Active,
+            created_at: current_time,
+            updated_at: current_time,
+        };
+
+        // Save employee data
+        let employee_key = format!("EMPLOYEE_{}", employee_counter);
+        env.storage().persistent().set(&employee_key, &employee);
+
+        // Save employer's employee list
+        let employer_key = format!("EMPLOYER_EMPLOYEES_{}", employer);
+        let mut employee_list: Vec<u64> = env.storage().persistent()
+            .get(&employer_key)
+            .unwrap_or(Vec::new(&env));
+        employee_list.push_back(employee_counter);
+        env.storage().persistent().set(&employer_key, &employee_list);
+
+        // Update counter
+        env.storage().instance().set(&EMPLOYEE_COUNTER, &employee_counter);
+
+        // Emit event
+        env.events().publish(
+            ("employee_added",),
+            (employee_counter, employer, wallet_address, email, salary)
+        );
+
+        Ok(employee_counter)
+    }
+
+    /// Get employee details by ID
+    pub fn get_employee(
+        env: Env,
+        employee_id: u64,
+    ) -> Result<Employee, Error> {
+        let employee_key = format!("EMPLOYEE_{}", employee_id);
+        env.storage().persistent()
+            .get(&employee_key)
+            .ok_or(Error::PayrollNotFound) // Reusing error for not found
+    }
+
+    /// Get all employees for an employer
+    pub fn get_employer_employees(
+        env: Env,
+        employer: Address,
+    ) -> Result<Vec<Employee>, Error> {
+        let employer_key = format!("EMPLOYER_EMPLOYEES_{}", employer);
+        let employee_ids: Vec<u64> = env.storage().persistent()
+            .get(&employer_key)
+            .unwrap_or(Vec::new(&env));
+
+        let mut employees = Vec::new(&env);
+        for employee_id in employee_ids.iter() {
+            let employee_key = format!("EMPLOYEE_{}", employee_id);
+            if let Some(employee) = env.storage().persistent().get::<String, Employee>(&employee_key) {
+                employees.push_back(employee);
+            }
+        }
+
+        Ok(employees)
+    }
+
+    /// Update employee details
+    pub fn update_employee(
+        env: Env,
+        employer: Address,
+        employee_id: u64,
+        salary: Option<u64>,
+        position: Option<String>,
+        payment_schedule: Option<String>,
+        status: Option<EmployeeStatus>,
+    ) -> Result<(), Error> {
+        employer.require_auth();
+
+        let employee_key = format!("EMPLOYEE_{}", employee_id);
+        let mut employee: Employee = env.storage().persistent()
+            .get(&employee_key)
+            .ok_or(Error::PayrollNotFound)?;
+
+        // Verify employer owns this employee
+        if employee.employer != employer {
+            return Err(Error::NotAuthorized);
+        }
+
+        // Update fields if provided
+        if let Some(new_salary) = salary {
+            employee.salary = new_salary;
+        }
+        if let Some(new_position) = position {
+            employee.position = new_position;
+        }
+        if let Some(new_schedule) = payment_schedule {
+            employee.payment_schedule = new_schedule;
+        }
+        if let Some(new_status) = status {
+            employee.status = new_status;
+        }
+
+        employee.updated_at = env.ledger().timestamp();
+
+        // Save updated employee
+        env.storage().persistent().set(&employee_key, &employee);
+
+        // Emit event
+        env.events().publish(
+            ("employee_updated",),
+            (employee_id, employer, employee.salary)
+        );
+
+        Ok(())
+    }
+
+    /// Remove/terminate an employee
+    pub fn remove_employee(
+        env: Env,
+        employer: Address,
+        employee_id: u64,
+    ) -> Result<(), Error> {
+        employer.require_auth();
+
+        let employee_key = format!("EMPLOYEE_{}", employee_id);
+        let mut employee: Employee = env.storage().persistent()
+            .get(&employee_key)
+            .ok_or(Error::PayrollNotFound)?;
+
+        // Verify employer owns this employee
+        if employee.employer != employer {
+            return Err(Error::NotAuthorized);
+        }
+
+        // Mark as terminated instead of deleting
+        employee.status = EmployeeStatus::Terminated;
+        employee.updated_at = env.ledger().timestamp();
+
+        env.storage().persistent().set(&employee_key, &employee);
+
+        // Emit event
+        env.events().publish(
+            ("employee_terminated",),
+            (employee_id, employer)
+        );
+
+        Ok(())
+    }
+
+    /// Get employee count for an employer
+    pub fn get_employee_count(
+        env: Env,
+        employer: Address,
+    ) -> u64 {
+        let employer_key = format!("EMPLOYER_EMPLOYEES_{}", employer);
+        let employee_ids: Vec<u64> = env.storage().persistent()
+            .get(&employer_key)
+            .unwrap_or(Vec::new(&env));
+
+        // Count only active employees
+        let mut count = 0u64;
+        for employee_id in employee_ids.iter() {
+            let employee_key = format!("EMPLOYEE_{}", employee_id);
+            if let Some(employee) = env.storage().persistent().get::<String, Employee>(&employee_key) {
+                if employee.status == EmployeeStatus::Active {
+                    count += 1;
+                }
+            }
+        }
+
+        count
     }
 }

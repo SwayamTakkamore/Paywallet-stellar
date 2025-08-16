@@ -58,6 +58,7 @@ export default function WorkerSettingsPage() {
   const [settings, setSettings] = useState<WorkerSettingsData>(mockSettings);
   const [showWalletKey, setShowWalletKey] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const updateNotificationSetting = (key: keyof WorkerSettingsData['notifications'], value: boolean) => {
     setSettings(prev => ({
@@ -91,10 +92,24 @@ export default function WorkerSettingsPage() {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
-    // Here you would typically save to API
-    console.log('Saving settings:', settings);
-    setHasChanges(false);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Here you would typically save to API
+      console.log('Saving settings:', settings);
+      setHasChanges(false);
+      
+      // Show success message
+      alert('Settings saved successfully!');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -106,9 +121,22 @@ export default function WorkerSettingsPage() {
           <p className="text-gray-600">Manage your account preferences and security</p>
         </div>
         {hasChanges && (
-          <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
+          <Button 
+            onClick={handleSave} 
+            className="bg-green-600 hover:bg-green-700"
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
           </Button>
         )}
       </div>

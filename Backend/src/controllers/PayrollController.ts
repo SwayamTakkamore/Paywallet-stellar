@@ -34,6 +34,161 @@ export class PayrollController {
     this.sorobanService = new SorobanService();
   }
 
+  // =============================================================================
+  // EMPLOYEE MANAGEMENT ENDPOINTS
+  // =============================================================================
+
+  /**
+   * Add a new employee
+   * POST /api/employees
+   */
+  addEmployee = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { employerId } = assertUserAuth(req);
+      const employeeData = req.body;
+
+      logger.info(`Adding employee for employer ${employerId}`, { employeeData });
+
+      // Validate required fields
+      const requiredFields = ['email', 'firstName', 'lastName', 'position', 'salary', 'currency', 'paymentSchedule'];
+      for (const field of requiredFields) {
+        if (!employeeData[field]) {
+          res.status(400).json({ 
+            success: false, 
+            error: `Missing required field: ${field}` 
+          });
+          return;
+        }
+      }
+
+      // Add employerId to employee data
+      employeeData.employerId = employerId;
+
+      // Add employee to blockchain and database
+      const result = await this.payrollService.addEmployee(employerId, employeeData);
+
+      logger.info('Employee added successfully', result);
+
+      res.status(201).json({
+        success: true,
+        message: 'Employee added successfully',
+        data: {
+          employee: result.employee,
+          contractEmployeeId: result.contractEmployeeId,
+          txHash: result.txHash
+        }
+      });
+    } catch (error) {
+      logger.error('Error adding employee:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Internal server error' 
+      });
+    }
+  };
+
+  /**
+   * Get all employees for the authenticated employer
+   * GET /api/employees
+   */
+  getEmployees = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { employerId } = assertUserAuth(req);
+
+      logger.info(`Fetching employees for employer ${employerId}`);
+
+      const result = await this.payrollService.getEmployerEmployees(employerId);
+
+      res.status(200).json({
+        success: true,
+        data: result.employees,
+        meta: {
+          count: result.employees.length,
+          fromBlockchain: result.fromBlockchain,
+          fallback: result.fallback || false
+        }
+      });
+    } catch (error) {
+      logger.error('Error fetching employees:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Internal server error' 
+      });
+    }
+  };
+
+  /**
+   * Update an employee
+   * PUT /api/employees/:id
+   */
+  updateEmployee = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { employerId } = assertUserAuth(req);
+      const employeeId = req.params.id;
+      const updates = req.body;
+
+      logger.info(`Updating employee ${employeeId} for employer ${employerId}`, { updates });
+
+      const result = await this.payrollService.updateEmployee(employerId, employeeId, updates);
+
+      res.status(200).json({
+        success: true,
+        message: 'Employee updated successfully',
+        data: {
+          employee: result.employee,
+          txHash: result.txHash
+        }
+      });
+    } catch (error) {
+      logger.error('Error updating employee:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Internal server error' 
+      });
+    }
+  };
+
+  /**
+   * Get employee statistics
+   * GET /api/employees/stats
+   */
+  getEmployeeStats = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { employerId } = assertUserAuth(req);
+
+      logger.info(`Fetching employee stats for employer ${employerId}`);
+
+      const employees = await this.payrollService.getEmployerEmployees(employerId);
+      
+      const stats = {
+        total: employees.employees.length,
+        active: employees.employees.filter(emp => emp.status === 'active').length,
+        inactive: employees.employees.filter(emp => emp.status === 'inactive').length,
+        totalSalaryBudget: employees.employees
+          .filter(emp => emp.status === 'active')
+          .reduce((sum, emp) => sum + emp.salary, 0),
+        averageSalary: employees.employees.length > 0 
+          ? employees.employees.reduce((sum, emp) => sum + emp.salary, 0) / employees.employees.length 
+          : 0
+      };
+
+      res.status(200).json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      logger.error('Error fetching employee stats:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Internal server error' 
+      });
+    }
+  };
+
+  // =============================================================================
+  // PAYROLL ENDPOINTS (EXISTING)
+  // =============================================================================
+
   /**
    * Create a new payroll escrow
    * POST /api/payrolls
